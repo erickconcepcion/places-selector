@@ -1,0 +1,9 @@
+<label>{{ label }}</label>
+<input
+  matInput
+  [placeholder]="placeholder"
+  [value]="initialValue"
+  (input)="onInput($event)"
+  (focus)="onInput($event)"
+  (blur)="onBlur($event)"
+/>
