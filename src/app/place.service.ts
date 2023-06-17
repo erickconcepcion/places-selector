@@ -1,5 +1,5 @@
 import {} from "@angular/google-maps";
-import { Inject, Injectable } from '@angular/core';
+import { Inject, Injectable, NgZone } from '@angular/core';
 import { Observable } from 'rxjs/internal/Observable';
 import { HttpClient } from '@angular/common/http';
 import { appConfigs } from './configuration';
@@ -16,11 +16,13 @@ export class PlaceService {
 
   constructor(
     private http: HttpClient,
-    @Inject(DOCUMENT) private document: Document
+    @Inject(DOCUMENT) private document: Document,
+    private ngZone: NgZone
   ) {
-    this.service = new google.maps.places.PlacesService(
-      this.document.createElement('div')
-    );
+      this.service = new google.maps.places.PlacesService(
+        this.document.createElement('div')
+      );
+    
   }
   private placesUri =
     'https://maps.googleapis.com/maps/api/place/textsearch/json';
@@ -61,33 +63,36 @@ export class PlaceService {
         results: google.maps.places.PlaceResult[] | null,
         status: google.maps.places.PlacesServiceStatus
       ) => {
-        if (status !== google.maps.places.PlacesServiceStatus.OK) {
-          observer.next(this.emptyResult());
-        } else {
-          observer.next({
-            results:
-              results?.map(
-                (r) =>
-                  <Place>{
-                    formatted_address: r.formatted_address,
-                    geometry: {
-                      location: {
-                        lat: r?.geometry?.location?.lat(),
-                        lng: r?.geometry?.location?.lng(),
+        this.ngZone.run(() => {
+          if (status !== google.maps.places.PlacesServiceStatus.OK) {
+            observer.next(this.emptyResult());
+          } else {
+            observer.next({
+              results:
+                results?.map(
+                  (r) =>
+                    <Place>{
+                      formatted_address: r.formatted_address,
+                      geometry: {
+                        location: {
+                          lat: r?.geometry?.location?.lat(),
+                          lng: r?.geometry?.location?.lng(),
+                        },
                       },
-                    },
-                    icon: r.icon,
-                    name: r.name,
-                    place_id: r.place_id,
-                    types: r.types,
-                  }
-              ) ?? [],
-            status: status,
-          });
-        }
-
-        observer.complete();
+                      icon: r.icon,
+                      name: r.name,
+                      place_id: r.place_id,
+                      types: r.types,
+                    }
+                ) ?? [],
+              status: status,
+            });
+          }
+  
+          observer.complete();
+        })
       };
+
 
       this.service.textSearch(request, callback);
     });
